@@ -28,7 +28,7 @@ static UIAlertView *alterView;
     return instance;
 }
 
-- (void)showToast:(NSString *)message {
+- (UIWindow*)window {
     UIWindow *window = nil;
     if ([[UIApplication sharedApplication].delegate respondsToSelector:@selector(window)]) {
         window = [[UIApplication sharedApplication].delegate window];
@@ -44,22 +44,50 @@ static UIAlertView *alterView;
     if (window == nil) {
         window = [UIApplication sharedApplication].keyWindow;
     }
+
+    return window;
+}
+
+- (void)showToast:(NSString *)message {
     
-    [window makeToast:message duration:3 position:@"bottom"];
+    [[self window] makeToast:message duration:3 position:@"bottom"];
 }
 
 - (void)alterWithTitle:(NSString *)title andMessage:(NSString *)message {
-  [[alterView initWithTitle:title message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:LocalizedString(@"Commen.OK"), nil] show];
+  [[alterView initWithTitle:title message:message delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil] show];
 }
 
 - (void)alterWithTitle:(NSString *)title andMessage:(NSString *)message andDelegate:(id)delegate andTage:(int)tag {
-    alterView.tag = tag;
-    [[alterView initWithTitle:title message:message delegate:delegate cancelButtonTitle:@"取消" otherButtonTitles:@"确定", nil] show];
+    
+    [self alterWithTitle:title andMessage:message leftButtonText:@"取消" rightButtonText:@"确定" andDelegate:delegate andTage:tag];
+    
 }
 
 - (void)alterWithTitle:(NSString *)title andMessage:(NSString *)message leftButtonText:(NSString *)leftText rightButtonText:(NSString *)rightText andDelegate:(id)delegate andTage:(int)tag {
-    alterView.tag = tag;
-    [[alterView initWithTitle:title message:message delegate:delegate cancelButtonTitle:leftText otherButtonTitles:rightText, nil] show];
+    
+    __weak __block id<UIAlertViewDelegate> alertDelegate = delegate;
+    
+    if ([[UIDevice currentDevice].systemVersion floatValue] >= 8.0) {
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *cancelButton = [UIAlertAction actionWithTitle:leftText style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+            [alertDelegate alertView:nil clickedButtonAtIndex:0];
+        }];
+        
+        UIAlertAction *okButton = [UIAlertAction actionWithTitle:rightText style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            [alertDelegate alertView:nil clickedButtonAtIndex:1];
+        }];
+        
+        [alertController addAction:cancelButton];
+        [alertController addAction:okButton];
+        
+        [[[self window] rootViewController] presentViewController:alertController animated:YES completion:nil];
+        
+    } else {
+        alterView.tag = tag;
+        [[alterView initWithTitle:title message:message delegate:delegate cancelButtonTitle:leftText otherButtonTitles:rightText, nil] show];
+    }
+    
 }
 
 @end
